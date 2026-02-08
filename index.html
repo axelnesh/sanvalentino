@@ -80,6 +80,26 @@ button,
 
   -webkit-tap-highlight-color: transparent; /* iOS */
 }
+* {
+  -webkit-user-select: none !important;
+  -webkit-touch-callout: none !important;
+  -webkit-tap-highlight-color: rgba(0,0,0,0) !important;
+  user-select: none !important;
+  outline: none !important;
+}
+
+button {
+  all: unset; /* rimuove comportamento nativo Safari */
+  background: rgba(255,255,255,0.85);
+  border-radius: 6px;
+  padding: 6px 12px;
+  cursor: pointer;
+  text-align: center;
+}
+
+button:focus {
+  outline: none;
+}
 
 /* evita selezione accidentale su tutto il gioco */
 body {
@@ -208,6 +228,14 @@ let playerLocked = false;
 let gameEnded = false;
 
 /* ================= INPUT ================= */
+// 🔒 blocca selezione / long press / drag su iOS
+["touchstart", "touchmove", "touchend"].forEach(evt => {
+  document.addEventListener(evt, e => {
+    if (e.target.tagName === "BUTTON") {
+      e.preventDefault();
+    }
+  }, { passive: false });
+});
 
 window.addEventListener("keydown", e => {
   if (!audioStarted) {
