@@ -47,13 +47,34 @@ canvas {
   transform: scale(1.1);
   transition: 0.2s;
 }
+
+#mobileControls {
+  position: absolute;
+  bottom: 20px;
+  display: flex;
+  gap: 20px;
+}
+
+#mobileControls button {
+  width: 70px;
+  height: 70px;
+  font-size: 26px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255,255,255,0.85);
+  cursor: pointer;
+}
 </style>
 </head>
 
 <body>
 
 <canvas id="game" width="1200" height="500"></canvas>
-
+<div id="mobileControls">
+  <button id="leftBtn">◀</button>
+  <button id="jumpBtn">⤴</button>
+  <button id="rightBtn">▶</button>
+</div>
 <img id="heartImg" src="cuore.gif" style="display:none; position:absolute; width:200px;">
 
 <img id="npcNormal" src="npc1.png" hidden>
@@ -175,6 +196,26 @@ window.addEventListener("keydown", e => {
 });
 
 window.addEventListener("keyup", e => keys[e.key] = false);
+const leftBtn  = document.getElementById("leftBtn");
+const rightBtn = document.getElementById("rightBtn");
+const jumpBtn  = document.getElementById("jumpBtn");
+
+// movimento
+leftBtn.addEventListener("touchstart", () => keys["ArrowLeft"] = true);
+leftBtn.addEventListener("touchend",   () => keys["ArrowLeft"] = false);
+
+rightBtn.addEventListener("touchstart", () => keys["ArrowRight"] = true);
+rightBtn.addEventListener("touchend",   () => keys["ArrowRight"] = false);
+
+// salto
+jumpBtn.addEventListener("touchstart", () => {
+  if (!player.isJumping && !playerLocked) {
+    player.vy = jumpStrength;
+    player.isJumping = true;
+  }
+});
+
+
 
 /* ================= UPDATE ================= */
 
