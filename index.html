@@ -105,6 +105,11 @@ const playerImgs = [
   new Image()  // 2 - finale (player3)
 ];
 
+
+let npcMessage = "";      // testo temporaneo sopra NPC
+let npcMessageTime = 0;
+
+
 playerImgs[0].src = "player1.png";
 playerImgs[1].src = "player2.png";
 playerImgs[2].src = "player3.png";
@@ -174,7 +179,17 @@ window.addEventListener("keyup", e => keys[e.key] = false);
 /* ================= UPDATE ================= */
 
 function update() {
+ if (!player.finalPose) {
+    if (player.x < 0 || player.x + player.width > canvas.width) {
+      npcMessage = "hey, questa è la via ";
+      npcMessageTime = Date.now();
+    }
 
+    // Sparisce dopo 2 secondi
+    if (npcMessage && Date.now() - npcMessageTime > 1500) {
+      npcMessage = "";
+    }
+  }
   // Player movimento
   if (!playerLocked && !player.finalPose) {
     let moving = false;
@@ -237,6 +252,7 @@ function update() {
         npc.state = "normal"; 
       }
     }
+  
   }
 }
 
@@ -261,6 +277,27 @@ function draw() {
 
   // NPC
   ctx.drawImage(npcImgs[npc.state],npc.x,npc.y,npc.width,npc.height);
+  if (npcMessage) {
+    const padding = 6;
+    ctx.font = "16px Arial";
+    ctx.textAlign = "center";
+    const textWidth = ctx.measureText(npcMessage).width;
+    const boxWidth = textWidth + padding*2;
+    const boxHeight = 24;
+
+    // Box trasparente nero
+    ctx.fillStyle = "rgba(0,0,0,0.5)";
+    ctx.fillRect(
+      npc.x + npc.width/2 - boxWidth/2,
+      npc.y - 30 - boxHeight/2,
+      boxWidth,
+      boxHeight
+    );
+
+    // Testo giallo sopra box
+    ctx.fillStyle = "white";
+    ctx.fillText(npcMessage, npc.x + npc.width/2, npc.y - 26);
+  }
 }
 
 /* ================= UI ================= */
