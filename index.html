@@ -20,6 +20,9 @@ body {
 canvas {
   background: #87ceeb;
   border: 3px solid #000;
+  height: auto;
+  aspect-ratio: 12 / 5;
+  touch-action: none;
 }
 
 #dialog {
@@ -66,9 +69,7 @@ canvas {
   background: rgba(255,255,255,0.85);
   cursor: pointer;
 
-  canvas {
-  touch-action: none;
-}
+  
 }
 </style>
 </head>
@@ -109,7 +110,10 @@ canvas {
 
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
-
+function resizeCanvas() {
+  const scale = canvas.clientWidth / canvas.width;
+  ctx.setTransform(scale, 0, 0, scale, 0, 0);
+}
 const dialog = document.getElementById("dialog");
 const restartDiv = document.getElementById("restart");
 const heartImg = document.getElementById("heartImg");
@@ -240,6 +244,11 @@ canvas.addEventListener("touchend", e => {
   const dy = t.clientY - touchStartY;
 
   const minSwipe = 40; // sensibilità swipe
+
+
+window.addEventListener("resize", resizeCanvas);
+window.addEventListener("orientationchange", resizeCanvas);
+resizeCanvas();
 
   // reset
   keys["ArrowLeft"] = false;
