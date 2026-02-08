@@ -1,156 +1,160 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-  <meta charset="UTF-8">
-  <title>Mini Gioco 2D</title>
-  <style>
-    body {
-      margin: 0;
-      background: #3a2d2d;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      color: white;
-      font-family: Arial, sans-serif;
-    }
+<meta charset="UTF-8">
+<title>Mini Gioco 2D</title>
 
-    canvas {
-      background: #87ceeb;
-      border: 3px solid #000;
-    }
+<style>
+body {
+  margin: 0;
+  background: #3a2d2d;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  font-family: Arial, sans-serif;
+}
 
-    
-    #dialog {
+canvas {
+  background: #87ceeb;
+  border: 3px solid #000;
+}
+
+#dialog {
   position: absolute;
   display: none;
-  pointer-events: auto;
 }
-#restart img:hover {
-  transform: scale(1.1);
-  transition: 0.2s;
+
+.dialog-text {
+  background: rgba(0,0,0,0.45);
+  padding: 6px 10px;
+  border-radius: 6px;
+  margin-bottom: 6px;
+  color: white;
+  text-align: center;
+  pointer-events: none;
 }
+
 #dialog button {
   background: rgba(255,255,255,0.85);
   border: none;
   border-radius: 6px;
   padding: 6px 12px;
-  font-size: 14px;
   cursor: pointer;
 }
 
-#dialog button:hover {
-  background: white;
+#restart img:hover {
+  transform: scale(1.1);
+  transition: 0.2s;
 }
- 
-.dialog-text {
-  background: rgba(0, 0, 0, 0.45); /* trasparenza leggera */
-  padding: 6px 10px;
-  border-radius: 6px;
-  margin-bottom: 6px;
-  font-size: 14px;
-  text-align: center;
-  pointer-events: none; /* importantissimo: non blocca i click */
-}
-   
-
-
-    button {
-      margin-top: 5px;
-      padding: 10px 20px;
-      cursor: pointer;
-    }
-  </style>
+</style>
 </head>
+
 <body>
 
 <canvas id="game" width="1200" height="500"></canvas>
-<img id="heartImg"
-     src="cuore.gif"
-     style="display:none; position:absolute; width:200px;">
+
+<img id="heartImg" src="cuore.gif" style="display:none; position:absolute; width:200px;">
+
+<img id="npcNormal" src="npc1.png" hidden>
+<img id="npcTalk"   src="npcTalk.png" hidden>
+<img id="npcHappy"  src="npc2.png" hidden>
 
 <div id="dialog">
-    <div class="dialog-text">
-        👤 ALE : Will you be my Valentin?
-      </div>
-    <button onclick="answer('si')">Sì</button>
-    <button id="noBtn" onclick="answer('no')">No</button>
-    <div id="noGif" style="display:none; margin-left:55px; margin-top:-58px;">
-      <img src="farfa.gif" width="90">
-    </div>
+  <div class="dialog-text">👤 ALE : Will you be my Valentin?</div>
+  <button onclick="answer('si')">Sì</button>
+  <button id="noBtn" onclick="answer('no')">No</button>
+  <div id="noGif" style="display:none; margin-left:55px; margin-top:-58px;">
+    <img src="farfa.gif" width="90">
   </div>
-  
- <div id="restart" style="
-  display:none;
-  position:absolute;
-  text-align:center;
-  opacity:0.7;
-  font-size:14px;
-  cursor:pointer;"
-  onclick="resetGame()">
-
-  <p>Vuoi rigiocare?</p>
-
-  <img src="restart.png"
-       style="width:80px; margin-top:5px;">
 </div>
-<audio id="bgMusic" src="bg.mp3" loop></audio>
- 
-<script>
-    let floatTime = 0;
-    const canvas = document.getElementById("game");
-    const ctx = canvas.getContext("2d");
-    const bgMusic = document.getElementById("bgMusic");
-    let audioStarted = false;
-    ctx.font = "16px Arial";
 
-// Immagini bkg
-    const bgImg = new Image();
+<div id="restart"
+     style="display:none; position:absolute; text-align:center; opacity:0.7; cursor:pointer;"
+     onclick="resetGame()">
+  <img src="restart.png" width="150">
+</div>
+
+<audio id="bgMusic" src="bg.mp3" loop></audio>
+
+<script>
+/* ================= SETUP ================= */
+
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+const dialog = document.getElementById("dialog");
+const restartDiv = document.getElementById("restart");
+const heartImg = document.getElementById("heartImg");
+const bgMusic = document.getElementById("bgMusic");
+const gravity = 0.8;
+const jumpStrength = -12;
+
+const npcImgs = {
+  normal: document.getElementById("npcNormal"),
+  talk:   document.getElementById("npcTalk"),
+  happy:  document.getElementById("npcHappy")
+};
+
+const bgImg = new Image();
 bgImg.src = "background.png";
 
+const playerImgs = [
+  new Image(), // 0 - fermo / base
+  new Image(), // 1 - camminata
+  new Image()  // 2 - finale (player3)
+];
 
-    // Immagini player (due frame) e NPC
-    const playerImgs = [new Image(), new Image()];
-    playerImgs[0].src = "player1.png";
-    playerImgs[1].src = "player2.png";
-    
-    const npcImg = new Image();
-    npcImg.src = "npc.png";
-    
-    // Player
-    const player = {
-      x: 100,
-      y: 200,
-      width: 75,
-      height: 170,
-      speed: 3,
-      facing: "right",
-      vy: 0,
-      isJumping: false,
-      currentImg: 0,
-      frameCounter: 0
-    };
-    
-    // NPC
-    const npc = {
-      x: 900,
-      y: 250,
-      width: 83,
-      height: 180
-    };
-    
-    // Stato gioco
-    const keys = {};
-    let dialogShown = false;
-    let playerLocked = false;
-    let showHeart = false;
-    let gameEnded = false;
-    
-    const gravity = 0.8;
-    const jumpStrength = -12;
-    
-    // Input tastiera
-    window.addEventListener("keydown", e => {
+playerImgs[0].src = "player1.png";
+playerImgs[1].src = "player2.png";
+playerImgs[2].src = "player3.png";
+
+let audioStarted = false;
+let floatTime = 0;
+
+/* ================= PLAYER ================= */
+
+const player = {
+  x: 100,
+  y: 200,
+  width: 75,
+  height: 170,
+  speed: 3,
+  facing: "right",
+  vy: 0,
+  isJumping: false,
+  currentImg: 0,
+  frameCounter: 0,
+  finalPose: false
+};
+
+/* ================= NPC ================= */
+
+const npc = {
+  x: 900,
+  y: 250,
+  baseY: 250,
+  width: 83,
+  height: 180,
+  vy: 0,
+  isJumping: false,
+  lastJumpTime: 0,
+  state: "normal"
+};
+
+const npcJumpStrength = -9;
+const npcGravity = 0.4;
+
+/* ================= GAME STATE ================= */
+
+const keys = {};
+let dialogShown = false;
+let playerLocked = false;
+let gameEnded = false;
+
+/* ================= INPUT ================= */
+
+window.addEventListener("keydown", e => {
   if (!audioStarted) {
     bgMusic.volume = 0.4;
     bgMusic.play();
@@ -162,196 +166,144 @@ bgImg.src = "background.png";
   if (e.key === " " && !player.isJumping && !playerLocked) {
     player.vy = jumpStrength;
     player.isJumping = true;
-    jumpSound.play();
   }
 });
-    window.addEventListener("keyup", e => keys[e.key] = false);
-    
-    // Funzione reset gioco
-    function resetGame() {
-  // reset player
-  player.x = 40;
-  player.y = 120;
-  player.vy = 0;
-  player.isJumping = false;
-  playerLocked = false;
 
-  // stati
-  dialogShown = false;
-  showHeart = false;
-  gameEnded = false;
+window.addEventListener("keyup", e => keys[e.key] = false);
 
-  // dialog NPC
-  dialog.style.display = "none";
-  document.getElementById("noBtn").style.display = "inline-block";
-  document.getElementById("noGif").style.display = "none";
+/* ================= UPDATE ================= */
 
-  // cuore e restart
-  document.getElementById("heartImg").style.display = "none";
-  restartDiv.style.display = "none";
+function update() {
 
-  // animazione
-  player.currentImg = 0;
-  player.frameCounter = 0;
+  // Player movimento
+  if (!playerLocked && !player.finalPose) {
+    let moving = false;
 
-  // musica
-  bgMusic.currentTime = 0;
-  bgMusic.play();
-}
+    if (keys["ArrowRight"]) { player.x += player.speed; player.facing="right"; moving=true; }
+    if (keys["ArrowLeft"])  { player.x -= player.speed; player.facing="left"; moving=true; }
 
-    const restartDiv = document.getElementById("restart");
-    const noRestartBtn = document.getElementById("noRestart");
-
-    function update() {
-        
-      if (!playerLocked) {
-        let moving = false;
-        if (keys["ArrowRight"]) {
-          player.x += player.speed;
-          player.facing = "right";
-          moving = true;
-        }
-        if (keys["ArrowLeft"]) {
-          player.x -= player.speed;
-          player.facing = "left";
-          moving = true;
-        }
-    
-        // Animazione camminata
-        if(moving) {
-          player.frameCounter++;
-          if(player.frameCounter % 10 === 0) {
-            player.currentImg = (player.currentImg + 1) % 2;
-          }
-        } else {
-          player.currentImg = 0; // immobile usa prima immagine
-          player.frameCounter = 0;
-        }
-      }
-    
-      // Limiti orizzontali
-      player.x = Math.max(0, Math.min(canvas.width - player.width, player.x));
-    
-      // Salto e gravità
-      player.vy += gravity;
-      player.y += player.vy;
-    
-      // Terreno
-      if(player.y + player.height >= 434) {
-        player.y = 434 - player.height;
-        player.vy = 0;
-        player.isJumping = false;
-      }
-    
-      // Distanza player-NPC
-      const distance = Math.abs(player.x - npc.x);
-      if (distance < 60 && !dialogShown) {
-        dialog.style.display = "block";
-        dialogShown = true;
-        playerLocked = true;
-      }
-      if (dialogShown) {
-        floatTime += 0.05;
-
-        const floatOffset = Math.sin(floatTime) * 5;
-
-        dialog.style.left = (canvas.offsetLeft + npc.x - 20) + "px";
-        dialog.style.top =
-            (canvas.offsetTop + npc.y - 90 + floatOffset) + "px";
-      }
-      if (gameEnded) {
-  const heart = document.getElementById("heartImg");
-
-  heart.style.display = "block";
-  heart.style.left =
-    (canvas.offsetLeft + canvas.width / 2 - 100) + "px";
-  heart.style.top =
-    (canvas.offsetTop + 80) + "px";
-
-  restartDiv.style.display = "block";
-  restartDiv.style.left =
-    (canvas.offsetLeft + canvas.width / 2 - 60) + "px";
-  restartDiv.style.top =
-    (canvas.offsetTop + 300) + "px";
-}
-
+    if (moving) {
+      player.frameCounter++;
+      if (player.frameCounter % 10 === 0)
+        player.currentImg = (player.currentImg + 1) % 2;
+    } else {
+      player.currentImg = 0;
     }
-   
-    
-   
-    
-    function draw() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
-      // sfondo
-  if(bgImg.complete) ctx.drawImage(bgImg,0,0,canvas.width,canvas.height);
-
-
-
-    
-      // Player con flip e animazione
-      if(playerImgs[player.currentImg].complete) {
-        ctx.save();
-        if(player.facing==="left") {
-          ctx.translate(player.x + player.width/2,0);
-          ctx.scale(-1,1);
-          ctx.drawImage(playerImgs[player.currentImg], -player.width/2, player.y, player.width, player.height);
-        } else {
-          ctx.drawImage(playerImgs[player.currentImg], player.x, player.y, player.width, player.height);
-        }
-        ctx.restore();
-      }
-    
-      // NPC
-      if(npcImg.complete) ctx.drawImage(npcImg, npc.x, npc.y, npc.width, npc.height);
-    
-     
-    
-
-      
-    }
-    
-    function answer(choice) {
-  if (choice === "no") {
-    // NO: il gioco continua
-    noClicked = true;
-
-
-    // Nasconde il bottone NO
-    document.getElementById("noBtn").style.display = "none";
-
-    // Mostra la GIF
-    document.getElementById("noGif").style.display = "block";
-
-    return; // ⛔ IMPORTANTISSIMO: non chiude il gioco
   }
 
-  if (choice === "si") {
-    // SÌ: fine gioco
-    dialog.style.display = "none";
-    showHeart = true;
-    gameEnded = true;
-  
+  // Gravità
+  player.vy += gravity;
+  player.y += player.vy;
+
+  if (player.y + player.height >= 434) {
+    player.y = 434 - player.height;
+    player.vy = 0;
+    player.isJumping = false;
+  }
+
+  // Dialogo NPC
+  const distance = Math.abs(player.x - npc.x);
+  if (distance < 60 && !dialogShown) {
+    dialogShown = true;
+    playerLocked = true;
+    npc.state = "talk";
+    dialog.style.display = "block";
+  }
+
+  if (dialogShown) {
+    floatTime += 0.05;
+    dialog.style.left = canvas.offsetLeft + npc.x - 20 + "px";
+    dialog.style.top  = canvas.offsetTop + npc.y - 90 + Math.sin(floatTime)*5 + "px";
+  }
+
+  // NPC salta se felice
+  if (gameEnded) {
+    const now = Date.now();
+    if (!npc.isJumping && now - npc.lastJumpTime > 2000) {
+      npc.vy = npcJumpStrength;
+      npc.isJumping = true;
+      npc.lastJumpTime = now;
+    }
+
+    if (npc.isJumping) {
+      npc.vy += npcGravity;
+      npc.y += npc.vy;
+      npc.state = "happy";
+
+      if (npc.y >= npc.baseY) {
+        npc.y = npc.baseY;
+        npc.vy = 0;
+        npc.isJumping = false;
+        npc.state = "normal"; 
+      }
+    }
   }
 }
 
-    
-    
-    // Loop principale
-    function loop() {
-      update();
-      draw();
-    
-     
-    
-      requestAnimationFrame(loop);
-    }
-    
-    loop();
-    </script>
-    
+/* ================= DRAW ================= */
 
-  
+function draw() {
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  ctx.drawImage(bgImg,0,0,canvas.width,canvas.height);
+
+  // Player
+  ctx.save();
+  const playerImg = player.finalPose ? playerImgs[2] : playerImgs[player.currentImg];
+  if (player.facing==="left") {
+    ctx.translate(player.x + player.width/2,0);
+    ctx.scale(-1,1);
+    ctx.drawImage(playerImg,-player.width/2,player.y,player.width,player.height);
+  } else {
+    ctx.drawImage(playerImg,player.x,player.y,player.width,player.height);
+  }
+  ctx.restore();
+
+  // NPC
+  ctx.drawImage(npcImgs[npc.state],npc.x,npc.y,npc.width,npc.height);
+}
+
+/* ================= UI ================= */
+
+function answer(choice) {
+  if (choice==="no") {
+    document.getElementById("noBtn").style.display="none";
+    document.getElementById("noGif").style.display="block";
+    return;
+  }
+
+  // Sì → player3 e npc felice
+  dialog.style.display="none";
+  player.finalPose = true;
+  player.currentImg = 2;
+  playerLocked = true;
+
+  npc.state = "happy";
+  gameEnded = true;
+
+  // Cuore e restart
+  heartImg.style.display="block";
+  heartImg.style.left = canvas.offsetLeft + canvas.width/2 - 100 + "px";
+  heartImg.style.top = canvas.offsetTop + 80 + "px";
+
+  restartDiv.style.display="block";
+  restartDiv.style.left = canvas.offsetLeft + canvas.width/2 - 75 + "px";
+  restartDiv.style.top = canvas.offsetTop + 300 + "px";
+}
+
+function resetGame() {
+  location.reload();
+}
+
+/* ================= LOOP ================= */
+
+function loop() {
+  update();
+  draw();
+  requestAnimationFrame(loop);
+}
+loop();
+</script>
 
 </body>
 </html>
